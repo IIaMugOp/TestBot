@@ -1,0 +1,2 @@
+botToken = "6390548823:AAGnZr8UEJTnb12TfQwx3-F3xqLOBFwh2qg"
+groupID = -1002119533539

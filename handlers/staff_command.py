@@ -6,7 +6,7 @@ from kbs.kb_staff import get_kb_staff
 
 from config import groupID
 
-from .personal_command import message_link, questions_count, current_user_questions
+from .personal_command import message_link, questions_count, current_user_questions, answer_count
 
 from help_functions import find_user_by_message_id
 
@@ -45,3 +45,5 @@ async def group_reply(message: Message):
            if questions_count[original_user_id]:
               questions_count[original_user_id] = 0
            current_user_questions[message.from_user.id] = None
+           answer_count.setdefault(message.reply_to_message.message_id, 0)
+           answer_count[message.reply_to_message.message_id] += 1

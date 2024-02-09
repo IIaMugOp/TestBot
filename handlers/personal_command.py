@@ -21,7 +21,7 @@ class Questions(StatesGroup):
 questions_count = {}
 
 current_user_questions = {}
-
+answer_count = {}
 
 
 

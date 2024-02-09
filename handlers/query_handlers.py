@@ -9,7 +9,7 @@ from kbs.kb_wait import get_kb_wait
 from kbs.kb_intro import get_kb_user
 from config import groupID
 
-from .personal_command import Questions, current_user_questions, questions_count, message_link
+from .personal_command import Questions, current_user_questions, questions_count, message_link, answer_count
 
 
 router = Router()
@@ -27,7 +27,7 @@ async def cmd_cancel(message: Message, state: FSMContext):
             message_id_to_delete = group_message_id
             break
 
-    if message_id_to_delete:
+    if message_id_to_delete and not answer_count.get(message_id_to_delete):
         try:
             # Попытка удалить сообщение в группе
             print(f"Попытка удалить сообщение с ID: {message_id_to_delete}")
@@ -39,6 +39,9 @@ async def cmd_cancel(message: Message, state: FSMContext):
         except Exception as e:
             # Обработка возможных исключений, например, если сообщение уже удалено
             print(f"Ошибка при удалении сообщения: {e}")
+    else:
+        current_user_questions[user_id] = None
+        questions_count[original_user_id] = 0
 
     await message.answer(
         text=f"У вас нет активных вопросов, хотите задать новый?",
@@ -93,6 +96,7 @@ async def cancel(message: Message, state: FSMContext):
 
 @router.message(F.text | F.photo, StateFilter(Questions.question))
 async def forward_to_group(message: Message, state: FSMContext):
+    questions_count[message.from_user.id] = 0
     await message.answer(
         "Ваш вопрос отправлен. Ожидайте",
         reply_markup=get_kb_user()
@@ -101,8 +105,9 @@ async def forward_to_group(message: Message, state: FSMContext):
     forwarded_message = await message.forward(chat_id=groupID)
     message_link[message.from_user.id] = forwarded_message.message_id
     questions_count[message.from_user.id] = 1
-
     current_user_questions[message.from_user.id] = message.text
+
+    answer_count[message.message_id] = 0
     await state.set_state(Questions.intro)
 
 

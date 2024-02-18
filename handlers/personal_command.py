@@ -9,6 +9,9 @@ from kbs.kb_wait import get_kb_wait
 from kbs.kb_intro import get_kb_user
 from kbs.kb_cancel import get_kb_cancel
 
+import psycopg2
+from database_dir import db_storage
+
 router = Router()
 
 message_link = {}
@@ -46,7 +49,7 @@ async def cmd_start(message: Message):
 
 
 @router.message(F.text.lower() == 'задать вопрос')
-async def cmd_ask(message: Message, state: FSMContext):
+async def cmd_ask(message: Message):
     if questions_count.get(message.from_user.id) == 1:
         await message.answer(
             text='Вы уже задали вопрос.',
@@ -57,13 +60,30 @@ async def cmd_ask(message: Message, state: FSMContext):
             text="Задавайте Ваш вопрос:",
             reply_markup=get_kb_cancel()
         )
-        await state.set_state(Questions.question)
+        db_storage.set_state_db(message.from_user.id, 1)
+        # Устанавливаем пользователю состояние "задаёт вопрос"
+
+
+
+@router.message(F.text.lower() == 'нет, уточнить вопрос')
+async def cmd_ask(message: Message):
+    if questions_count.get(message.from_user.id) == 1:
+        await message.answer(
+            text='Вы уже задали вопрос.',
+            reply_markup=get_kb_user()
+        )
+    else:
+        await message.answer(
+            text="Уточните ваш вопрос:",
+            reply_markup=get_kb_cancel()
+        )
+        db_storage.set_state_db(message.from_user.id, 1)
         # Устанавливаем пользователю состояние "задаёт вопрос"
 
 
 
 @router.message(F.text.lower() == 'статус вопроса')
-async def cmd_check(message: Message, state: FSMContext):
+async def cmd_check(message: Message):
     if questions_count.get(message.from_user.id):
         await message.answer(
             text='Вы задали вопрос, ожидайте',

@@ -2,7 +2,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from handlers import personal_command, query_handlers, staff_command
 from config import botToken
-
+from database_dir import db_storage
 
 # Запуск бота
 async def main():

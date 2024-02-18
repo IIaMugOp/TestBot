@@ -7,18 +7,21 @@ from aiogram.types import Message, ReplyKeyboardRemove
 
 from kbs.kb_wait import get_kb_wait
 from kbs.kb_intro import get_kb_user
+
 from config import groupID
+import psycopg2
+from database_dir import db_storage
 
 from .personal_command import Questions, current_user_questions, questions_count, message_link, answer_count
-
+import datetime
 
 router = Router()
 
 
 
 
-@router.message(F.text.lower() == "отменить вопрос", ~StateFilter(Questions.question))
-async def cmd_cancel(message: Message, state: FSMContext):
+@router.message(F.text.lower() == "отменить вопрос", db_storage.FilterNotQuestion())
+async def cmd_cancel(message: Message):
     user_id = message.from_user.id
     # Найти message_id сообщения в группе, соответствующего пользователю
     message_id_to_delete = None
@@ -85,17 +88,22 @@ async def cmd_start(message: Message):
 
 
 
-@router.message(F.text.lower() == 'отмена', StateFilter(Questions.question))
+@router.message(F.text.lower() == 'отмена', db_storage.FilterQuestion())
 async def cancel(message: Message, state: FSMContext):
     await message.answer(
         "Хотите задать вопрос службе поддержки?",
         reply_markup=get_kb_user()
     )
+    with db_storage.conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO question_table (cancel)  VALUES (%s) ",
+                (1))
+            db_storage.conn.commit()
 
 
 
-@router.message(F.text | F.photo, StateFilter(Questions.question))
-async def forward_to_group(message: Message, state: FSMContext):
+@router.message(F.text | F.photo, db_storage.FilterQuestion())
+async def forward_to_group(message: Message):
     questions_count[message.from_user.id] = 0
     await message.answer(
         "Ваш вопрос отправлен. Ожидайте",
@@ -108,8 +116,13 @@ async def forward_to_group(message: Message, state: FSMContext):
     current_user_questions[message.from_user.id] = message.text
 
     answer_count[message.message_id] = 0
-    await state.set_state(Questions.intro)
+    db_storage.set_state_db(message.from_user.id, 0)
 
+    with db_storage.conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO question_table (user_id, message_id, question, answer, time)  VALUES (%s, %s, %s, %s, %s) ",
+                (message.from_user.id, message.message_id, message.text, 0, datetime.datetime.now()))
+            db_storage.conn.commit()
 
 
 
